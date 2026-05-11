@@ -13,16 +13,16 @@ const coverEl = document.getElementById('cover');
 // Lista de músicas de exemplo (funciona melhor com arquivos locais)
 const songs = [
     {
-        title: "Música Exemplo 1",
-        artist: "Artista A",
-        src: "caminho/para/sua/musica1.mp3",
-        cover: "caminho/para/sua/capa1.jpg"
+        title: "Symphony No. 40 (Mozart)",
+        artist: "Exemplo Clássico",
+        src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+        cover: "https://via.placeholder.com/150/FF0000/FFFFFF?text=Mozart"
     },
     {
-        title: "Música Exemplo 2",
-        artist: "Artista B",
-        src: "caminho/para/sua/musica2.mp3",
-        cover: "caminho/para/sua/capa2.jpg"
+        title: "Exemplo Eletrônico",
+        artist: "SoundHelix",
+        src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+        cover: "https://via.placeholder.com/150/0000FF/FFFFFF?text=Synth"
     }
 ];
 
