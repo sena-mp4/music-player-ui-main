@@ -1,43 +1,54 @@
-// Seleciona os elementos do HTML com os quais vamos interagir
+// Pega os elementos do HTML que já existem no seu player
 const audio = document.getElementById('audio');
 const playBtn = document.getElementById('play');
-const prevBtn = document.getElementById('prev');
-const nextBtn = document.getElementById('next');
+const nextBtn = document.getElementById('next'); // Vamos transformar em botão de buscar
 const progress = document.getElementById('progress');
 const currentTimeEl = document.getElementById('current-time');
 const durationEl = document.getElementById('duration');
 const titleEl = document.getElementById('title');
 const artistEl = document.getElementById('artist');
 const coverEl = document.getElementById('cover');
+const prevBtn = document.getElementById('prev'); // Vamos transformar em campo de busca
 
-// Lista de músicas de exemplo (funciona melhor com arquivos locais)
-const songs = [
-    {
-        title: "Symphony No. 40 (Mozart)",
-        artist: "Exemplo Clássico",
-        src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        cover: "https://via.placeholder.com/150/FF0000/FFFFFF?text=Mozart"
-    },
-    {
-        title: "Exemplo Eletrônico",
-        artist: "SoundHelix",
-        src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-        cover: "https://via.placeholder.com/150/0000FF/FFFFFF?text=Synth"
+// --- INÍCIO DA MÁGICA ---
+// A URL base da API gratuita que busca as músicas
+const API_URL = 'https://bhindi1.ddns.net/music/api';
+
+// Essa função é a grande novidade! Ela busca a música na API.
+async function searchAndPlayMusic(query) {
+    if (!query) return; // Não faz nada se o campo estiver vazio
+
+    try {
+        // 1. Primeiro, pedimos o 'song_id' usando o termo de busca
+        const prepareResponse = await fetch(`${API_URL}/prepare/${query}`);
+        const prepareData = await prepareResponse.json();
+
+        if (prepareData.status !== 'success') {
+            alert('Música não encontrada! Tente outro nome.');
+            return;
+        }
+
+        // 2. Com o 'song_id' em mãos, pedimos os detalhes completos (inclusive a audio_url!)
+        const fetchResponse = await fetch(`${API_URL}/fetch/${prepareData.song_id}`);
+        const songData = await fetchResponse.json();
+
+        // 3. Atualiza a interface do player com as informações da música
+        titleEl.textContent = songData.result.title;
+        artistEl.textContent = songData.result.artist;
+        coverEl.src = songData.result.thumbnail;
+        
+        // 4. Define o src do elemento <audio> com o link direto do MP3!
+        audio.src = songData.result.audio_url;
+
+        // 5. Começa a tocar a música automaticamente
+        audio.play();
+        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+
+    } catch (error) {
+        console.error("Erro ao buscar música:", error);
+        alert("Erro ao buscar a música. Tente novamente.");
     }
-];
-
-let currentSongIndex = 0;
-
-// Função para carregar uma música da lista
-function loadSong(song) {
-    titleEl.textContent = song.title;
-    artistEl.textContent = song.artist;
-    audio.src = song.src;
-    coverEl.src = song.cover;
 }
-
-// Carrega a primeira música ao iniciar
-loadSong(songs[currentSongIndex]);
 
 // Função para tocar ou pausar a música
 function playPauseSong() {
