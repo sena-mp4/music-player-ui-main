@@ -42,18 +42,17 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ===================== PROXY CORS ESTÁVEL =====================
-const CORS_PROXY = 'https://api.codetabs.com/v1/proxy?quest=';
-const YT_PROXY = 'https://corsproxy.io/?'; // alternativo: api.allorigins.win/raw?url=
+// ===================== PROXY CORS CONFIÁVEL =====================
+const PROXY = 'https://api.allorigins.win/raw?url=';
 
-// ===================== ITUNES API (com proxy CORS) =====================
+// ===================== ITUNES API (via proxy) =====================
 async function searchItunes(query) {
   const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=12`;
-  const proxyUrl = CORS_PROXY + encodeURIComponent(itunesUrl);
   try {
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error('Erro na rede iTunes via proxy');
+    const response = await fetch(PROXY + encodeURIComponent(itunesUrl));
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
+    if (!data || !data.results) throw new Error('Resposta vazia');
     return data.results.map(track => ({
       title: track.trackName,
       artist: track.artistName,
@@ -63,29 +62,28 @@ async function searchItunes(query) {
       collectionId: track.collectionId
     }));
   } catch (error) {
-    console.error('Erro iTunes:', error);
+    console.warn('Erro iTunes:', error);
     return [];
   }
 }
 
-// ===================== BUSCA DO ID DO YOUTUBE (com proxy) =====================
+// ===================== BUSCA DO ID DO YOUTUBE (via proxy) =====================
 async function fetchYouTubeId(title, artist) {
   const query = encodeURIComponent(`${artist} - ${title}`);
   const youtubeSearch = `https://www.youtube.com/results?search_query=${query}`;
   try {
-    const res = await fetch(YT_PROXY + encodeURIComponent(youtubeSearch));
+    const res = await fetch(PROXY + encodeURIComponent(youtubeSearch));
     if (!res.ok) return null;
     const html = await res.text();
     const match = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
     return match ? match[1] : null;
   } catch (e) {
-    console.error('Erro ao buscar ID do YouTube:', e);
+    console.warn('Erro ao buscar ID do YouTube:', e);
     return null;
   }
 }
 
 // ===================== YOUTUBE PLAYER =====================
-// A função onYouTubeIframeAPIReady é chamada globalmente quando a API carrega
 window.onYouTubeIframeAPIReady = function() {
   player = new YT.Player('youtube-audio-player', {
     height: '0',
@@ -111,7 +109,6 @@ function onPlayerStateChange(event) {
   }
 }
 
-// Carrega a API do YouTube se necessário
 if (!window.YT) {
   const tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
@@ -126,7 +123,7 @@ async function playTrack(track) {
     currentVideoId = videoId;
     player.loadVideoById(videoId);
   } else {
-    alert('Não foi possível encontrar o vídeo para esta música. Tente outra.');
+    alert('Não foi possível reproduzir esta música. Tente outra.');
   }
 }
 
@@ -148,10 +145,9 @@ playBtn.addEventListener('click', () => {
   }
 });
 
-prevBtn.addEventListener('click', () => { /* fila futura */ });
-nextBtn.addEventListener('click', () => { /* fila futura */ });
+prevBtn.addEventListener('click', () => {});
+nextBtn.addEventListener('click', () => {});
 
-// Barra de progresso suave com requestAnimationFrame
 function startProgressUpdate() {
   function step() {
     if (player && player.getCurrentTime && player.getDuration) {
@@ -181,7 +177,6 @@ progressBar.addEventListener('input', () => {
   }
 });
 
-// Volume
 volumeBar.addEventListener('input', () => {
   if (player) player.setVolume(volumeBar.value);
 });
@@ -241,10 +236,13 @@ searchInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') searchAndPlay(searchInput.value);
 });
 
-// ===================== CONTEÚDO INICIAL (capas reais) =====================
+// ===================== CONTEÚDO INICIAL =====================
 function placeholderUrl(text, bgColor = '333333', fgColor = 'FFFFFF') {
   return `https://placehold.co/300x300/${bgColor}/${fgColor}?text=${encodeURIComponent(text)}`;
 }
+
+// Corrige a imagem de capa inicial do player
+document.getElementById('player-cover').src = placeholderUrl('Capa', '444444');
 
 async function renderInitialCards() {
   const trendingGrid = document.getElementById('trending-grid');
@@ -267,7 +265,6 @@ async function renderInitialCards() {
     c.addEventListener('click', () => searchAndPlay(c.dataset.query));
   });
 
-  // Playlists
   const playlistsGrid = document.getElementById('playlists-grid');
   const playlists = [
     { name: 'Hits do Momento', query: 'pop hits' },
@@ -291,7 +288,6 @@ async function renderInitialCards() {
     c.addEventListener('click', () => searchAndPlay(c.dataset.query));
   });
 
-  // Categorias
   const categoriesGrid = document.getElementById('categories-grid');
   const categories = [
     { name: '🎤 Pop', genre: 'pop', color: '#FF3366' },
@@ -315,7 +311,6 @@ async function renderInitialCards() {
   });
 }
 
-// Utilitários
 function formatTime(seconds) {
   if (isNaN(seconds)) return '00:00';
   const m = Math.floor(seconds / 60);
@@ -323,5 +318,4 @@ function formatTime(seconds) {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// Inicia tudo
 renderInitialCards();
