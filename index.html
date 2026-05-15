@@ -61,8 +61,11 @@
                 <button id="search-button">Buscar</button>
             </div>
 
+            <!-- Resultados da busca (aparece dinamicamente) -->
+            <div id="search-results" class="search-results-grid" style="display:none;"></div>
+
             <!-- Seção Em Alta -->
-            <section class="section">
+            <section class="section" id="trending-section">
                 <h2 class="section-title">Em Alta agora</h2>
                 <div class="card-grid" id="trending-grid"></div>
             </section>
@@ -78,9 +81,6 @@
                 <h2 class="section-title">Explore Categorias</h2>
                 <div class="categories-grid" id="categories-grid"></div>
             </section>
-
-            <!-- Resultados da Busca -->
-            <div id="search-results" class="search-results-grid" style="display:none;"></div>
         </main>
     </div>
 
@@ -111,7 +111,7 @@
         </div>
     </div>
 
-    <!-- Player invisível do YouTube -->
+    <!-- Player de áudio invisível do YouTube (fora da player-bar para evitar conflitos) -->
     <div id="youtube-audio-player"></div>
 
     <script src="script.js"></script>
