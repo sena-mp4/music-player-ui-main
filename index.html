@@ -2,18 +2,28 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Music Player</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
+    <!-- Botão de menu para mobile -->
+    <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu">
+        <i class="fas fa-bars"></i>
+    </button>
+
     <div class="app-container">
         <!-- Menu Lateral -->
-        <nav class="sidebar">
-            <div class="logo">
-                <i class="fas fa-music"></i>
-                <h2>Music Player</h2>
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-music"></i>
+                    <h2>Music Player</h2>
+                </div>
+                <button class="menu-close" id="menu-close" aria-label="Fechar menu">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             
             <ul class="nav-menu">
@@ -54,26 +64,23 @@
             <!-- Seção Em Alta -->
             <section class="section">
                 <h2 class="section-title">Em Alta agora</h2>
-                <div class="card-grid" id="trending-grid">
-                    <!-- Cards carregados dinamicamente -->
-                </div>
+                <div class="card-grid" id="trending-grid"></div>
             </section>
 
             <!-- Seção Playlists Recomendadas -->
             <section class="section">
                 <h2 class="section-title">Playlists Recomendadas</h2>
-                <div class="card-grid" id="playlists-grid">
-                    <!-- Cards carregados dinamicamente -->
-                </div>
+                <div class="card-grid" id="playlists-grid"></div>
             </section>
 
             <!-- Seção Categorias -->
             <section class="section">
                 <h2 class="section-title">Explore Categorias</h2>
-                <div class="categories-grid" id="categories-grid">
-                    <!-- Categorias carregadas dinamicamente -->
-                </div>
+                <div class="categories-grid" id="categories-grid"></div>
             </section>
+
+            <!-- Resultados da Busca -->
+            <div id="search-results" class="search-results-grid" style="display:none;"></div>
         </main>
     </div>
 
@@ -102,8 +109,10 @@
             <button id="volume-btn"><i class="fas fa-volume-up"></i></button>
             <input type="range" id="volume-bar" value="70" min="0" max="100">
         </div>
-        <audio id="audio"></audio>
     </div>
+
+    <!-- Player invisível do YouTube -->
+    <div id="youtube-audio-player"></div>
 
     <script src="script.js"></script>
 </body>
