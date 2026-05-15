@@ -42,11 +42,17 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ===================== ITUNES API (sem proxy, CORS nativo) =====================
+// ===================== PROXY CORS ESTÁVEL =====================
+const CORS_PROXY = 'https://api.codetabs.com/v1/proxy?quest=';
+const YT_PROXY = 'https://corsproxy.io/?'; // alternativo: api.allorigins.win/raw?url=
+
+// ===================== ITUNES API (com proxy CORS) =====================
 async function searchItunes(query) {
+  const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=12`;
+  const proxyUrl = CORS_PROXY + encodeURIComponent(itunesUrl);
   try {
-    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=12`);
-    if (!response.ok) throw new Error('Erro na rede iTunes');
+    const response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error('Erro na rede iTunes via proxy');
     const data = await response.json();
     return data.results.map(track => ({
       title: track.trackName,
@@ -62,13 +68,12 @@ async function searchItunes(query) {
   }
 }
 
-// ===================== BUSCA DO ID DO YOUTUBE (com proxy estável) =====================
+// ===================== BUSCA DO ID DO YOUTUBE (com proxy) =====================
 async function fetchYouTubeId(title, artist) {
   const query = encodeURIComponent(`${artist} - ${title}`);
-  const proxyUrl = 'https://corsproxy.io/?';
   const youtubeSearch = `https://www.youtube.com/results?search_query=${query}`;
   try {
-    const res = await fetch(proxyUrl + encodeURIComponent(youtubeSearch));
+    const res = await fetch(YT_PROXY + encodeURIComponent(youtubeSearch));
     if (!res.ok) return null;
     const html = await res.text();
     const match = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
@@ -80,7 +85,8 @@ async function fetchYouTubeId(title, artist) {
 }
 
 // ===================== YOUTUBE PLAYER =====================
-function onYouTubeIframeAPIReady() {
+// A função onYouTubeIframeAPIReady é chamada globalmente quando a API carrega
+window.onYouTubeIframeAPIReady = function() {
   player = new YT.Player('youtube-audio-player', {
     height: '0',
     width: '0',
@@ -90,7 +96,7 @@ function onYouTubeIframeAPIReady() {
       onStateChange: onPlayerStateChange
     }
   });
-}
+};
 
 function onPlayerStateChange(event) {
   if (event.data === YT.PlayerState.PLAYING) {
@@ -105,14 +111,12 @@ function onPlayerStateChange(event) {
   }
 }
 
-// Carrega a API do YouTube se ainda não estiver presente
+// Carrega a API do YouTube se necessário
 if (!window.YT) {
   const tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
   document.head.appendChild(tag);
 }
-// Fallback caso a API já tenha carregado antes do script
-window.onYouTubeIframeAPIReady = window.onYouTubeIframeAPIReady || onYouTubeIframeAPIReady;
 
 // ===================== REPRODUÇÃO =====================
 async function playTrack(track) {
@@ -144,10 +148,10 @@ playBtn.addEventListener('click', () => {
   }
 });
 
-prevBtn.addEventListener('click', () => { /* pode implementar fila depois */ });
-nextBtn.addEventListener('click', () => { /* idem */ });
+prevBtn.addEventListener('click', () => { /* fila futura */ });
+nextBtn.addEventListener('click', () => { /* fila futura */ });
 
-// Barra de progresso com requestAnimationFrame (leve e suave)
+// Barra de progresso suave com requestAnimationFrame
 function startProgressUpdate() {
   function step() {
     if (player && player.getCurrentTime && player.getDuration) {
@@ -226,7 +230,6 @@ function displaySearchResults(tracks) {
   });
 }
 
-// Pequeno loading na busca
 function showSearchLoading(show) {
   if (!searchResults) return;
   searchResults.style.display = show ? 'block' : 'none';
@@ -239,6 +242,10 @@ searchInput.addEventListener('keypress', (e) => {
 });
 
 // ===================== CONTEÚDO INICIAL (capas reais) =====================
+function placeholderUrl(text, bgColor = '333333', fgColor = 'FFFFFF') {
+  return `https://placehold.co/300x300/${bgColor}/${fgColor}?text=${encodeURIComponent(text)}`;
+}
+
 async function renderInitialCards() {
   const trendingGrid = document.getElementById('trending-grid');
   trendingGrid.innerHTML = '<p style="color:#b3b3b3;">Carregando sugestões...</p>';
@@ -246,7 +253,7 @@ async function renderInitialCards() {
   let cardsHTML = '';
   for (let artist of artists) {
     const tracks = await searchItunes(artist);
-    const cover = tracks.length > 0 ? tracks[0].cover : 'https://via.placeholder.com/300/FF3366/FFFFFF?text=' + encodeURIComponent(artist);
+    const cover = tracks.length > 0 ? tracks[0].cover : placeholderUrl(artist, 'FF3366');
     cardsHTML += `
       <div class="card" data-query="${artist}">
         <img src="${cover}" alt="${artist}">
@@ -272,9 +279,10 @@ async function renderInitialCards() {
     { name: 'Jazz Relax', query: 'jazz' },
     { name: 'Indie', query: 'indie music' }
   ];
+  const colors = ['FF3366', '3366FF', '33FF66', 'FFCC00', 'FF6600', '9933FF', 'FF3399', '3399FF'];
   playlistsGrid.innerHTML = playlists.map((pl, i) => `
     <div class="card" data-query="${pl.query}">
-      <img src="https://via.placeholder.com/300/${['FF3366','3366FF','33FF66','FFCC00','FF6600','9933FF','FF3399','3399FF'][i]}/FFFFFF?text=${encodeURIComponent(pl.name)}" alt="${pl.name}">
+      <img src="${placeholderUrl(pl.name, colors[i])}" alt="${pl.name}">
       <h3>${pl.name}</h3>
       <p>Playlist</p>
     </div>
