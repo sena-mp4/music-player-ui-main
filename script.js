@@ -1,3 +1,5 @@
+// script.js - CORRIGIDO E FUNCIONAL
+
 // Elementos da UI
 const searchInput = document.getElementById('search-input');
 const searchButton = document.getElementById('search-button');
@@ -18,6 +20,7 @@ const sidebar = document.getElementById('sidebar');
 
 // Estado
 let player;
+let playerReady = false;
 let currentVideoId = null;
 let progressAnimationFrame = null;
 let lastSearchResults = [];
@@ -27,60 +30,25 @@ function openSidebar() {
     sidebar.classList.add('open');
     document.body.style.overflow = 'hidden';
 }
-
 function closeSidebar() {
     sidebar.classList.remove('open');
     document.body.style.overflow = '';
 }
-
 menuToggle.addEventListener('click', openSidebar);
 menuClose.addEventListener('click', closeSidebar);
-
-// Fecha sidebar ao clicar fora (opcional, mas melhora UX)
 document.addEventListener('click', (e) => {
     if (!sidebar.contains(e.target) && e.target !== menuToggle && sidebar.classList.contains('open')) {
         closeSidebar();
     }
 });
 
-// --- YouTube API ---
-let tag = document.createElement('script');
-tag.src = "https://www.youtube.com/iframe_api";
-let firstScriptTag = document.getElementsByTagName('script')[0];
-firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-function onYouTubeIframeAPIReady() {
-    player = new YT.Player('youtube-audio-player', {
-        height: '0',
-        width: '0',
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-        }
-    });
-}
-
-function onPlayerReady() {
-    console.log('Player YouTube pronto');
-}
-
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.PLAYING) {
-        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        startProgressUpdate();
-    } else if (event.data === YT.PlayerState.PAUSED) {
-        playBtn.innerHTML = '<i class="fas fa-play"></i>';
-        stopProgressUpdate();
-    } else if (event.data === YT.PlayerState.ENDED) {
-        playBtn.innerHTML = '<i class="fas fa-play"></i>';
-        stopProgressUpdate();
-    }
-}
-
-// --- iTunes API ---
+// --- iTunes API (com proxy CORS) ---
 async function searchItunes(query) {
+    const corsProxy = 'https://api.allorigins.win/raw?url=';
+    const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=12`;
+    const urlToFetch = corsProxy + encodeURIComponent(itunesUrl);
     try {
-        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=12`);
+        const response = await fetch(urlToFetch);
         if (!response.ok) throw new Error('Falha na rede');
         const data = await response.json();
         return data.results.map(track => ({
@@ -97,43 +65,68 @@ async function searchItunes(query) {
     }
 }
 
-// --- Busca de ID do YouTube (com fallback) ---
+// --- Busca de ID do YouTube (com proxy CORS) ---
 async function fetchYouTubeId(title, artist) {
-    const query = `${artist} - ${title}`;
-    // Primeira tentativa: Invidious
+    const query = encodeURIComponent(`${artist} - ${title}`);
+    const corsProxy = 'https://api.allorigins.win/raw?url=';
+    const searchUrl = `https://www.youtube.com/results?search_query=${query}`;
     try {
-        const response = await fetch(`https://invidi.link/search?q=${encodeURIComponent(query)}`);
-        if (response.ok) {
-            const text = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            const link = doc.querySelector('a[href^="/watch?v="]');
-            if (link) return link.getAttribute('href').split('=')[1];
-        }
-    } catch (e) { /* ignora */ }
-    // Fallback: API simples sem chave (yt.lemnoslife.com?q=...)
-    try {
-        const res = await fetch(`https://yt.lemnoslife.com/search?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        if (data.items && data.items.length > 0) {
-            return data.items[0].id;
-        }
-    } catch (e) { /* ignora */ }
+        const response = await fetch(corsProxy + encodeURIComponent(searchUrl));
+        if (!response.ok) return null;
+        const html = await response.text();
+        const match = html.match(/\/watch\?v=([a-zA-Z0-9_-]{11})/);
+        if (match) return match[1];
+    } catch (e) {
+        console.error('Erro ao buscar ID do YouTube:', e);
+    }
     return null;
+}
+
+// --- YouTube API (inicialização robusta) ---
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('youtube-audio-player', {
+        height: '0',
+        width: '0',
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
+    });
+}
+function onPlayerReady(event) {
+    playerReady = true;
+    console.log('✅ Player do YouTube pronto!');
+}
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING) {
+        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        startProgressUpdate();
+    } else if (event.data === YT.PlayerState.PAUSED) {
+        playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        stopProgressUpdate();
+    } else if (event.data === YT.PlayerState.ENDED) {
+        playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        stopProgressUpdate();
+    }
+}
+if (!window.YT) {
+    let tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    let firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 }
 
 // --- Reprodução ---
 async function playTrack(track) {
     updatePlayerUI(track);
     const videoId = await fetchYouTubeId(track.title, track.artist);
-    if (videoId && player && player.loadVideoById) {
+    if (videoId && player && playerReady) {
         currentVideoId = videoId;
         player.loadVideoById(videoId);
     } else {
-        alert('Não foi possível encontrar o vídeo para esta música.');
+        alert('Não foi possível reproduzir esta música. Tente outra.');
     }
 }
-
 function updatePlayerUI(track) {
     playerTitle.textContent = track.title;
     playerArtist.textContent = track.artist;
@@ -153,8 +146,6 @@ playBtn.addEventListener('click', () => {
         searchAndPlay('Billie Eilish');
     }
 });
-
-// Progresso com requestAnimationFrame (mais suave)
 function startProgressUpdate() {
     function step() {
         if (player && player.getCurrentTime && player.getDuration) {
@@ -170,18 +161,15 @@ function startProgressUpdate() {
     }
     step();
 }
-
 function stopProgressUpdate() {
     if (progressAnimationFrame) {
         cancelAnimationFrame(progressAnimationFrame);
         progressAnimationFrame = null;
     }
 }
-
 progressBar.addEventListener('input', () => {
     if (player && player.getDuration) {
-        const seek = (progressBar.value / 100) * player.getDuration();
-        player.seekTo(seek, true);
+        player.seekTo((progressBar.value / 100) * player.getDuration(), true);
     }
 });
 
@@ -189,7 +177,6 @@ progressBar.addEventListener('input', () => {
 volumeBar.addEventListener('input', () => {
     if (player) player.setVolume(volumeBar.value);
 });
-
 volumeBtn.addEventListener('click', () => {
     if (player) {
         if (player.isMuted()) {
@@ -214,7 +201,6 @@ async function searchAndPlay(query) {
     playTrack(tracks[0]);
     displaySearchResults(tracks);
 }
-
 function displaySearchResults(tracks) {
     if (!searchResults) return;
     searchResults.style.display = 'grid';
@@ -225,69 +211,63 @@ function displaySearchResults(tracks) {
             <p>${track.artist}</p>
         </div>
     `).join('');
-
     document.querySelectorAll('.search-result-card').forEach(card => {
         card.addEventListener('click', function() {
             const idx = this.dataset.index;
-            if (lastSearchResults[idx]) {
-                playTrack(lastSearchResults[idx]);
-            }
+            if (lastSearchResults[idx]) playTrack(lastSearchResults[idx]);
         });
     });
 }
-
 searchButton.addEventListener('click', () => searchAndPlay(searchInput.value));
 searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') searchAndPlay(searchInput.value);
 });
 
-// --- Conteúdo inicial (cards) ---
-function renderInitialCards() {
-    const artists = ['Billie Eilish', 'The Weeknd', 'Anitta', 'Coldplay', 'Dua Lipa', 'Post Malone', 'Ariana Grande', 'Drake'];
+// --- Conteúdo Inicial (Cards com capas reais do iTunes) ---
+async function renderInitialCards() {
     const trendingGrid = document.getElementById('trending-grid');
-    trendingGrid.innerHTML = artists.map(a => `
-        <div class="card" data-query="${a}">
-            <img src="https://via.placeholder.com/300/FF3366/FFFFFF?text=${encodeURIComponent(a)}" alt="${a}">
-            <h3>${a}</h3>
-            <p>Artista</p>
-        </div>
-    `).join('');
+    const artists = ['Billie Eilish', 'The Weeknd', 'Anitta', 'Coldplay', 'Dua Lipa'];
+    for (let artist of artists) {
+        const tracks = await searchItunes(artist);
+        const cover = tracks.length > 0 ? tracks[0].cover : 'https://via.placeholder.com/300';
+        trendingGrid.innerHTML += `
+            <div class="card" data-query="${artist}">
+                <img src="${cover}" alt="${artist}">
+                <h3>${artist}</h3>
+                <p>Artista</p>
+            </div>
+        `;
+    }
     trendingGrid.querySelectorAll('.card').forEach(c => {
         c.addEventListener('click', () => searchAndPlay(c.dataset.query));
     });
 
-    // Playlists
-    const playlists = ['Hits do Momento', 'Rock Clássico', 'Sertanejo', 'Eletrônica', 'MPB', 'Hip Hop', 'Jazz', 'Indie'];
-    document.getElementById('playlists-grid').innerHTML = playlists.map(p => `
+    const playlistsGrid = document.getElementById('playlists-grid');
+    const playlists = ['Hits do Momento', 'Rock Clássico', 'Sertanejo', 'Eletrônica'];
+    const colors = ['FF3366', '3366FF', '33FF66', 'FFCC00'];
+    playlistsGrid.innerHTML = playlists.map((p, i) => `
         <div class="card" data-query="${p}">
-            <img src="https://via.placeholder.com/300/3366FF/FFFFFF?text=${encodeURIComponent(p)}" alt="${p}">
+            <img src="https://via.placeholder.com/300/${colors[i]}/FFFFFF?text=${p}" alt="${p}">
             <h3>${p}</h3>
             <p>Playlist</p>
         </div>
     `).join('');
-    document.getElementById('playlists-grid').querySelectorAll('.card').forEach(c => {
+    playlistsGrid.querySelectorAll('.card').forEach(c => {
         c.addEventListener('click', () => searchAndPlay(c.dataset.query));
     });
 
-    // Categorias
+    const categoriesGrid = document.getElementById('categories-grid');
     const categories = [
         { name: '🎤 Pop', genre: 'pop', color: '#FF3366' },
         { name: '🎸 Rock', genre: 'rock', color: '#E91E63' },
-        { name: '🎧 Eletrônica', genre: 'electronic', color: '#9C27B0' },
-        { name: '🎹 MPB', genre: 'mpb', color: '#673AB7' },
-        { name: '🤠 Sertanejo', genre: 'sertanejo', color: '#3F51B5' },
-        { name: '🎵 Funk', genre: 'funk', color: '#2196F3' },
-        { name: '🎷 Jazz', genre: 'jazz', color: '#009688' },
-        { name: '🎼 Clássica', genre: 'classical', color: '#4CAF50' },
-        { name: '🎙️ Hip Hop', genre: 'hip hop', color: '#FF9800' },
-        { name: '🌍 Reggae', genre: 'reggae', color: '#FF5722' }
+        { name: '🎧 Eletrônica', genre: 'electronic', color: '#9C27B0' }
     ];
-    document.getElementById('categories-grid').innerHTML = categories.map(c => `
+    categoriesGrid.innerHTML = categories.map(c => `
         <div class="category-item" style="background-color: ${c.color}" data-query="${c.genre}">
             <span>${c.name}</span>
         </div>
     `).join('');
-    document.getElementById('categories-grid').querySelectorAll('.category-item').forEach(el => {
+    categoriesGrid.querySelectorAll('.category-item').forEach(el => {
         el.addEventListener('click', () => searchAndPlay(el.dataset.query));
     });
 }
