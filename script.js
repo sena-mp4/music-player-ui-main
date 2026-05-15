@@ -1,107 +1,200 @@
-// Pega os elementos do HTML que já existem no seu player
+// Elementos do Player
 const audio = document.getElementById('audio');
-const playBtn = document.getElementById('play');
-const nextBtn = document.getElementById('next'); // Vamos transformar em botão de buscar
-const progress = document.getElementById('progress');
+const playBtn = document.getElementById('play-btn');
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+const progressBar = document.getElementById('progress-bar');
 const currentTimeEl = document.getElementById('current-time');
-const durationEl = document.getElementById('duration');
-const titleEl = document.getElementById('title');
-const artistEl = document.getElementById('artist');
-const coverEl = document.getElementById('cover');
-const prevBtn = document.getElementById('prev'); // Vamos transformar em campo de busca
+const durationTimeEl = document.getElementById('duration-time');
+const volumeBar = document.getElementById('volume-bar');
+const volumeBtn = document.getElementById('volume-btn');
+const playerTitle = document.getElementById('player-title');
+const playerArtist = document.getElementById('player-artist');
+const playerCover = document.getElementById('player-cover');
+const searchInput = document.getElementById('search-input');
+const searchButton = document.getElementById('search-button');
 
-// --- INÍCIO DA MÁGICA ---
-// A URL base da API gratuita que busca as músicas
+// API gratuita para buscar músicas
 const API_URL = 'https://bhindi1.ddns.net/music/api';
 
-// Essa função é a grande novidade! Ela busca a música na API.
+// Função para buscar música na API
 async function searchAndPlayMusic(query) {
-    if (!query) return; // Não faz nada se o campo estiver vazio
-
+    if (!query) return;
+    
     try {
-        // 1. Primeiro, pedimos o 'song_id' usando o termo de busca
-        const prepareResponse = await fetch(`${API_URL}/prepare/${query}`);
+        const prepareResponse = await fetch(`${API_URL}/prepare/${encodeURIComponent(query)}`);
         const prepareData = await prepareResponse.json();
-
+        
         if (prepareData.status !== 'success') {
             alert('Música não encontrada! Tente outro nome.');
             return;
         }
-
-        // 2. Com o 'song_id' em mãos, pedimos os detalhes completos (inclusive a audio_url!)
+        
         const fetchResponse = await fetch(`${API_URL}/fetch/${prepareData.song_id}`);
         const songData = await fetchResponse.json();
-
-        // 3. Atualiza a interface do player com as informações da música
-        titleEl.textContent = songData.result.title;
-        artistEl.textContent = songData.result.artist;
-        coverEl.src = songData.result.thumbnail;
         
-        // 4. Define o src do elemento <audio> com o link direto do MP3!
-        audio.src = songData.result.audio_url;
-
-        // 5. Começa a tocar a música automaticamente
-        audio.play();
-        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-
+        if (songData.status === 'success') {
+            updatePlayerUI(songData.result);
+            audio.src = songData.result.audio_url;
+            audio.play();
+            playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        }
     } catch (error) {
-        console.error("Erro ao buscar música:", error);
-        alert("Erro ao buscar a música. Tente novamente.");
+        console.error('Erro ao buscar música:', error);
+        alert('Erro ao buscar a música. Tente novamente.');
     }
 }
 
-// Função para tocar ou pausar a música
-function playPauseSong() {
-    if (audio.paused) {
+// Atualizar interface do player
+function updatePlayerUI(result) {
+    playerTitle.textContent = result.title || 'Título';
+    playerArtist.textContent = result.artist || 'Artista';
+    playerCover.src = result.thumbnail || 'https://via.placeholder.com/50';
+}
+
+// Controles de reprodução
+playBtn.addEventListener('click', () => {
+    if (audio.paused && audio.src) {
         audio.play();
         playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-    } else {
+    } else if (!audio.paused) {
         audio.pause();
         playBtn.innerHTML = '<i class="fas fa-play"></i>';
+    } else {
+        // Se não houver música selecionada, busca uma padrão
+        searchAndPlayMusic('pop hits 2024');
     }
-}
-
-// Avança para a próxima música
-function nextSong() {
-    currentSongIndex = (currentSongIndex + 1) % songs.length;
-    loadSong(songs[currentSongIndex]);
-    audio.play(); // Começa a tocar automaticamente
-    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-}
-
-// Volta para a música anterior
-function prevSong() {
-    currentSongIndex = (currentSongIndex - 1 + songs.length) % songs.length;
-    loadSong(songs[currentSongIndex]);
-    audio.play();
-    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-}
-
-// Atualiza a barra de progresso e os tempos
-audio.addEventListener('timeupdate', () => {
-    const { currentTime, duration } = audio;
-    const progressPercent = (currentTime / duration) * 100;
-    progress.value = progressPercent;
-
-    // Exibe os tempos formatados
-    currentTimeEl.textContent = formatTime(currentTime);
-    durationEl.textContent = formatTime(duration);
 });
 
-// Permite ao usuário clicar na barra para avançar/retroceder
-progress.addEventListener('input', () => {
-    const seekTime = (progress.value / 100) * audio.duration;
+prevBtn.addEventListener('click', () => {});
+nextBtn.addEventListener('click', () => {});
+
+// Barra de progresso
+audio.addEventListener('timeupdate', () => {
+    const { currentTime, duration } = audio;
+    if (duration) {
+        progressBar.value = (currentTime / duration) * 100;
+        currentTimeEl.textContent = formatTime(currentTime);
+        durationTimeEl.textContent = formatTime(duration);
+    }
+});
+
+progressBar.addEventListener('input', () => {
+    const seekTime = (progressBar.value / 100) * audio.duration;
     audio.currentTime = seekTime;
 });
 
-// Formata segundos para "minutos:segundos"
+// Volume
+volumeBar.addEventListener('input', () => {
+    audio.volume = volumeBar.value / 100;
+    updateVolumeIcon();
+});
+
+volumeBtn.addEventListener('click', () => {
+    audio.muted = !audio.muted;
+    updateVolumeIcon();
+});
+
+function updateVolumeIcon() {
+    if (audio.muted || audio.volume === 0) {
+        volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+    } else if (audio.volume < 0.5) {
+        volumeBtn.innerHTML = '<i class="fas fa-volume-down"></i>';
+    } else {
+        volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+    }
+}
+
+// Funções auxiliares
 function formatTime(seconds) {
+    if (isNaN(seconds)) return '00:00';
     const min = Math.floor(seconds / 60);
     const sec = Math.floor(seconds % 60);
     return `${min}:${sec < 10 ? '0' : ''}${sec}`;
 }
 
-// Conecta os botões às funções
-playBtn.addEventListener('click', playPauseSong);
-nextBtn.addEventListener('click', nextSong);
-prevBtn.addEventListener('click', prevSong);
+// Busca
+searchButton.addEventListener('click', () => {
+    searchAndPlayMusic(searchInput.value);
+});
+
+searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        searchAndPlayMusic(searchInput.value);
+    }
+});
+
+// ===== CONTEÚDO DA PÁGINA INICIAL =====
+const trendingArtists = [
+    { name: 'Billie Eilish', query: 'Billie Eilish', cover: 'https://via.placeholder.com/160/FF3366/FFFFFF?text=Billie' },
+    { name: 'The Weeknd', query: 'The Weeknd', cover: 'https://via.placeholder.com/160/3366FF/FFFFFF?text=Weeknd' },
+    { name: 'Anitta', query: 'Anitta', cover: 'https://via.placeholder.com/160/33FF66/FFFFFF?text=Anitta' },
+    { name: 'Coldplay', query: 'Coldplay', cover: 'https://via.placeholder.com/160/FFCC00/FFFFFF?text=Coldplay' },
+    { name: 'Dua Lipa', query: 'Dua Lipa', cover: 'https://via.placeholder.com/160/FF6600/FFFFFF?text=Dua+Lipa' },
+    { name: 'Post Malone', query: 'Post Malone', cover: 'https://via.placeholder.com/160/9933FF/FFFFFF?text=Post' },
+    { name: 'Ariana Grande', query: 'Ariana Grande', cover: 'https://via.placeholder.com/160/FF3399/FFFFFF?text=Ariana' },
+    { name: 'Drake', query: 'Drake', cover: 'https://via.placeholder.com/160/3399FF/FFFFFF?text=Drake' }
+];
+
+const playlists = [
+    { name: 'Hits do Momento', query: 'pop hits 2024', cover: 'https://via.placeholder.com/160/FF4444/FFFFFF?text=Hits' },
+    { name: 'Clássicos do Rock', query: 'classic rock', cover: 'https://via.placeholder.com/160/4444FF/FFFFFF?text=Rock' },
+    { name: 'Sertanejo Top', query: 'sertanejo', cover: 'https://via.placeholder.com/160/44FF44/FFFFFF?text=Sertanejo' },
+    { name: 'Eletrônica', query: 'electronic music', cover: 'https://via.placeholder.com/160/FFFF44/FFFFFF?text=Eletro' },
+    { name: 'MPB Essencial', query: 'mpb brasileira', cover: 'https://via.placeholder.com/160/FF44FF/FFFFFF?text=MPB' },
+    { name: 'Hip Hop', query: 'hip hop', cover: 'https://via.placeholder.com/160/44FFFF/FFFFFF?text=HipHop' },
+    { name: 'Jazz Relax', query: 'jazz', cover: 'https://via.placeholder.com/160/FF8844/FFFFFF?text=Jazz' },
+    { name: 'Indie', query: 'indie music', cover: 'https://via.placeholder.com/160/8844FF/FFFFFF?text=Indie' }
+];
+
+const categories = [
+    { name: '🎤 Pop', genre: 'pop', color: '#FF3366' },
+    { name: '🎸 Rock', genre: 'rock', color: '#E91E63' },
+    { name: '🎧 Eletrônica', genre: 'electronic', color: '#9C27B0' },
+    { name: '🎹 MPB', genre: 'mpb', color: '#673AB7' },
+    { name: '🤠 Sertanejo', genre: 'sertanejo', color: '#3F51B5' },
+    { name: '🎵 Funk', genre: 'funk', color: '#2196F3' },
+    { name: '🎷 Jazz', genre: 'jazz', color: '#009688' },
+    { name: '🎼 Clássica', genre: 'classical', color: '#4CAF50' },
+    { name: '🎙️ Hip Hop', genre: 'hip hop', color: '#FF9800' },
+    { name: '🌍 Reggae', genre: 'reggae', color: '#FF5722' }
+];
+
+// Preencher grade "Em Alta"
+function renderTrending() {
+    const grid = document.getElementById('trending-grid');
+    grid.innerHTML = trendingArtists.map(artist => `
+        <div class="card" onclick="searchAndPlayMusic('${artist.query}')">
+            <img src="${artist.cover}" alt="${artist.name}">
+            <h3>${artist.name}</h3>
+            <p>Artista</p>
+        </div>
+    `).join('');
+}
+
+// Preencher grade "Playlists"
+function renderPlaylists() {
+    const grid = document.getElementById('playlists-grid');
+    grid.innerHTML = playlists.map(playlist => `
+        <div class="card" onclick="searchAndPlayMusic('${playlist.query}')">
+            <img src="${playlist.cover}" alt="${playlist.name}">
+            <h3>${playlist.name}</h3>
+            <p>Playlist</p>
+        </div>
+    `).join('');
+}
+
+// Preencher grade "Categorias"
+function renderCategories() {
+    const grid = document.getElementById('categories-grid');
+    grid.innerHTML = categories.map(cat => `
+        <div class="category-item" style="background-color: ${cat.color}" onclick="searchAndPlayMusic('${cat.genre}')">
+            <span>${cat.name}</span>
+        </div>
+    `).join('');
+}
+
+// Inicializar página
+renderTrending();
+renderPlaylists();
+renderCategories();

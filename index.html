@@ -3,72 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Player de Música</title>
+    <title>Music Player</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Importando ícones do Font Awesome para os botões -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <!-- Menu Lateral (Sidebar) -->
-    <nav class="sidebar">
-        <h2>Meu Music Player</h2>
-        <ul>
-            <li><a href="#">Início</a></li>
-            <li><a href="#">Em Alta</a></li>
-            <li><a href="#">Gêneros</a></li>
-            <li><a href="#">Suas Músicas</a></li>
-            <li><a href="#">Artistas</a></li>
-        </ul>
-    </nav>
+    <div class="app-container">
+        <!-- Menu Lateral -->
+        <nav class="sidebar">
+            <div class="logo">
+                <i class="fas fa-music"></i>
+                <h2>Music Player</h2>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item active">
+                    <a href="#"><i class="fas fa-home"></i> <span>Início</span></a>
+                </li>
+                <li class="nav-item">
+                    <a href="#"><i class="fas fa-fire"></i> <span>Em Alta</span></a>
+                </li>
+                <li class="nav-item">
+                    <a href="#"><i class="fas fa-compass"></i> <span>Explorar</span></a>
+                </li>
+                <li class="nav-item">
+                    <a href="#"><i class="fas fa-bookmark"></i> <span>Sua Biblioteca</span></a>
+                </li>
+            </ul>
 
-    <!-- Conteúdo Principal -->
-    <div class="main-content">
-        <!-- Barra de Busca -->
-        <div class="search-container">
-            <input type="text" id="search-input" placeholder="O que você quer ouvir?">
-            <button id="search-button"><i class="fas fa-search"></i> Buscar</button>
-        </div>
+            <div class="playlist-section">
+                <h3>Suas Playlists</h3>
+                <ul>
+                    <li><a href="#">🎵 Favoritas</a></li>
+                    <li><a href="#">🔥 Hits do Momento</a></li>
+                    <li><a href="#">😌 Relax</a></li>
+                    <li><a href="#">💪 Treino</a></li>
+                </ul>
+            </div>
+        </nav>
 
-        <!-- Grade de Categorias/Gêneros -->
-        <h1>Explore as Categorias</h1>
-        <div class="categories-grid">
-            <div class="category-item" data-genre="pop"><img src="https://via.placeholder.com/40/FF0000/FFFFFF?text=Pop" alt="Pop"> Pop</div>
-            <div class="category-item" data-genre="mpb"><img src="https://via.placeholder.com/40/00FF00/FFFFFF?text=MPB" alt="MPB"> MPB</div>
-            <div class="category-item" data-genre="rock"><img src="https://via.placeholder.com/40/0000FF/FFFFFF?text=Rock" alt="Rock"> Rock</div>
-            <div class="category-item" data-genre="eletronica"><img src="https://via.placeholder.com/40/FFFF00/FFFFFF?text=Eletronica" alt="Eletrônica"> Eletrônica</div>
-            <div class="category-item" data-genre="sertanejo"><img src="https://via.placeholder.com/40/FF00FF/FFFFFF?text=Sertanejo" alt="Sertanejo"> Sertanejo</div>
-            <!-- Adicione quantas categorias quiser! -->
-        </div>
+        <!-- Conteúdo Principal -->
+        <main class="main-content">
+            <!-- Barra de Busca -->
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="search-input" placeholder="O que você quer ouvir?">
+                <button id="search-button">Buscar</button>
+            </div>
 
-        <!-- Aqui vai a sua div "music-player" original -->
-        <div class="music-player">
-            <!-- (todo o código do seu player, que deixei acima) -->
-        </div>
+            <!-- Seção Em Alta -->
+            <section class="section">
+                <h2 class="section-title">Em Alta agora</h2>
+                <div class="card-grid" id="trending-grid">
+                    <!-- Cards carregados dinamicamente -->
+                </div>
+            </section>
+
+            <!-- Seção Playlists Recomendadas -->
+            <section class="section">
+                <h2 class="section-title">Playlists Recomendadas</h2>
+                <div class="card-grid" id="playlists-grid">
+                    <!-- Cards carregados dinamicamente -->
+                </div>
+            </section>
+
+            <!-- Seção Categorias -->
+            <section class="section">
+                <h2 class="section-title">Explore Categorias</h2>
+                <div class="categories-grid" id="categories-grid">
+                    <!-- Categorias carregadas dinamicamente -->
+                </div>
+            </section>
+        </main>
     </div>
 
-    <!-- No final do body, o JavaScript para dar vida aos botões de busca e categorias -->
-    <script>
-        const searchButton = document.getElementById('search-button');
-        const searchInput = document.getElementById('search-input');
-        const categoryItems = document.querySelectorAll('.category-item');
+    <!-- Player Fixo no Rodapé -->
+    <div class="player-bar" id="player-bar">
+        <div class="player-left">
+            <img id="player-cover" src="https://via.placeholder.com/50" alt="Capa">
+            <div class="player-info">
+                <span id="player-title">Nenhuma música</span>
+                <span id="player-artist">Selecione algo para tocar</span>
+            </div>
+        </div>
+        <div class="player-center">
+            <div class="player-controls">
+                <button id="prev-btn"><i class="fas fa-backward"></i></button>
+                <button id="play-btn"><i class="fas fa-play"></i></button>
+                <button id="next-btn"><i class="fas fa-forward"></i></button>
+            </div>
+            <div class="progress-container">
+                <span id="current-time">00:00</span>
+                <input type="range" id="progress-bar" value="0" min="0" max="100">
+                <span id="duration-time">00:00</span>
+            </div>
+        </div>
+        <div class="player-right">
+            <button id="volume-btn"><i class="fas fa-volume-up"></i></button>
+            <input type="range" id="volume-bar" value="70" min="0" max="100">
+        </div>
+        <audio id="audio"></audio>
+    </div>
 
-        // Busca ao clicar no botão ou pressionar Enter
-        searchButton.addEventListener('click', () => searchAndPlayMusic(searchInput.value));
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchAndPlayMusic(searchInput.value);
-        });
-
-        // Busca ao clicar em uma categoria
-        categoryItems.forEach(item => {
-            item.addEventListener('click', function() {
-                const genre = this.dataset.genre;
-                const randomArtists = {
-                    pop: "Billie Eilish", mpb: "Caetano Veloso", rock: "Foo Fighters",
-                    eletronica: "Alok", sertanejo: "Jorge e Mateus"
-                };
-                searchAndPlayMusic(randomArtists[genre] || genre);
-            });
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
